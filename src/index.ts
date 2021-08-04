@@ -8,11 +8,11 @@ function parseSendReturn(sendReturn: SendReturnResult | SendReturn): any {
   return sendReturn.hasOwnProperty("result") ? sendReturn.result : sendReturn;
 }
 
-export class NoCloverProviderError extends Error {
+export class NoCoin98ProviderError extends Error {
   public constructor() {
     super();
     this.name = this.constructor.name;
-    this.message = "No Clover provider was found on window.clover.";
+    this.message = "No Coin98 provider was found on window object";
   }
 }
 
@@ -24,7 +24,7 @@ export class UserRejectedRequestError extends Error {
   }
 }
 
-export class CloverConnector extends AbstractConnector {
+export class Coin98Connector extends AbstractConnector {
   constructor(kwargs: AbstractConnectorArguments) {
     super(kwargs);
 
@@ -38,7 +38,7 @@ export class CloverConnector extends AbstractConnector {
     if (__DEV__) {
       console.log("Handling 'chainChanged' event with payload", chainId);
     }
-    this.emitUpdate({ chainId, provider: window.clover });
+    this.emitUpdate({ chainId, provider: window.ethereum });
   }
 
   private handleAccountsChanged(accounts: string[]): void {
@@ -63,29 +63,29 @@ export class CloverConnector extends AbstractConnector {
     if (__DEV__) {
       console.log("Handling 'networkChanged' event with payload", networkId);
     }
-    this.emitUpdate({ chainId: networkId, provider: window.clover });
+    this.emitUpdate({ chainId: networkId, provider: window.ethereum });
   }
 
   public async activate(): Promise<ConnectorUpdate> {
-    if (!window.clover) {
-      throw new NoCloverProviderError();
+    if (!window.isCoin98) {
+      throw new NoCoin98ProviderError();
     }
 
-    if (window.clover.on) {
-      window.clover.on("chainChanged", this.handleChainChanged);
-      window.clover.on("accountsChanged", this.handleAccountsChanged);
-      window.clover.on("close", this.handleClose);
-      window.clover.on("networkChanged", this.handleNetworkChanged);
+    if (window?.ethereum?.on) {
+      window.ethereum.on("chainChanged", this.handleChainChanged);
+      window.ethereum.on("accountsChanged", this.handleAccountsChanged);
+      window.ethereum.on("close", this.handleClose);
+      window.ethereum.on("networkChanged", this.handleNetworkChanged);
     }
 
-    if ((window.clover as any).isMetaMask) {
-      (window.clover as any).autoRefreshOnNetworkChange = false;
+    if ((window?.ethereum as any).isMetaMask) {
+      (window?.ethereum as any).autoRefreshOnNetworkChange = false;
     }
 
     // try to activate + get account via eth_requestAccounts
     let account;
     try {
-      account = await (window.clover.send as Send)(
+      account = await (window.ethereum.send as Send)(
         "eth_requestAccounts"
       ).then((sendReturn) => parseSendReturn(sendReturn)[0]);
     } catch (error) {
@@ -101,26 +101,26 @@ export class CloverConnector extends AbstractConnector {
     // if unsuccessful, try enable
     if (!account) {
       // if enable is successful but doesn't return accounts, fall back to getAccount (not happy i have to do this...)
-      account = await window.clover.enable().then(
+      account = await window.ethereum.enable().then(
         (sendReturn) => sendReturn && parseSendReturn(sendReturn)[0]
       );
     }
 
-    return { provider: window.clover, ...(account ? { account } : {}) };
+    return { provider: window.ethereum, ...(account ? { account } : {}) };
   }
 
   public async getProvider(): Promise<any> {
-    return window.clover;
+    return window.ethereum;
   }
 
   public async getChainId(): Promise<number | string> {
-    if (!window.clover) {
-      throw new NoCloverProviderError();
+    if (!window.isCoin98) {
+      throw new NoCoin98ProviderError();
     }
 
     let chainId;
     try {
-      chainId = await (window.clover.send as Send)("eth_chainId").then(
+      chainId = await (window.ethereum.send as Send)("eth_chainId").then(
         parseSendReturn
       );
     } catch {
@@ -132,7 +132,7 @@ export class CloverConnector extends AbstractConnector {
 
     if (!chainId) {
       try {
-        chainId = await (window.clover.send as Send)("net_version").then(
+        chainId = await (window.ethereum.send as Send)("net_version").then(
           parseSendReturn
         );
       } catch {
@@ -146,7 +146,7 @@ export class CloverConnector extends AbstractConnector {
     if (!chainId) {
       try {
         chainId = parseSendReturn(
-          (window.clover.send as SendOld)({ method: "net_version" })
+          (window.ethereum.send as SendOld)({ method: "net_version" })
         );
       } catch {
         warning(
@@ -157,16 +157,16 @@ export class CloverConnector extends AbstractConnector {
     }
 
     if (!chainId) {
-      if ((window.clover as any).isDapper) {
+      if ((window.ethereum as any).isDapper) {
         chainId = parseSendReturn(
-          (window.clover as any).cachedResults.net_version
+          (window.ethereum as any).cachedResults.net_version
         );
       } else {
         chainId =
-          (window.clover as any).chainId ||
-          (window.clover as any).netVersion ||
-          (window.clover as any).networkVersion ||
-          (window.clover as any)._chainId;
+          (window.ethereum as any).chainId ||
+          (window.ethereum as any).netVersion ||
+          (window.ethereum as any).networkVersion ||
+          (window.ethereum as any)._chainId;
       }
     }
 
@@ -174,13 +174,13 @@ export class CloverConnector extends AbstractConnector {
   }
 
   public async getAccount(): Promise<null | string> {
-    if (!window.clover) {
-      throw new NoCloverProviderError();
+    if (!window.isCoin98) {
+      throw new NoCoin98ProviderError();
     }
 
     let account;
     try {
-      account = await (window.clover.send as Send)("eth_accounts").then(
+      account = await (window.ethereum.send as Send)("eth_accounts").then(
         (sendReturn) => parseSendReturn(sendReturn)[0]
       );
     } catch {
@@ -189,7 +189,7 @@ export class CloverConnector extends AbstractConnector {
 
     if (!account) {
       try {
-        account = await window.clover.enable().then(
+        account = await window.ethereum.enable().then(
           (sendReturn) => parseSendReturn(sendReturn)[0]
         );
       } catch {
@@ -202,7 +202,7 @@ export class CloverConnector extends AbstractConnector {
 
     if (!account) {
       account = parseSendReturn(
-        (window.clover.send as SendOld)({ method: "eth_accounts" })
+        (window.ethereum.send as SendOld)({ method: "eth_accounts" })
       )[0];
     }
 
@@ -210,30 +210,31 @@ export class CloverConnector extends AbstractConnector {
   }
 
   public deactivate() {
-    if (window.clover && window.clover.removeListener) {
-      window.clover.removeListener(
+    if (window.ethereum && window.ethereum.removeListener) {
+      window.ethereum.removeListener(
         "chainChanged",
         this.handleChainChanged
       );
-      window.clover.removeListener(
+      window.ethereum.removeListener(
         "accountsChanged",
         this.handleAccountsChanged
       );
-      window.clover.removeListener("close", this.handleClose);
-      window.clover.removeListener(
+      window.ethereum.removeListener("close", this.handleClose);
+      window.ethereum.removeListener(
         "networkChanged",
         this.handleNetworkChanged
       );
+      window.ethereum.disconnect && window.ethereum.disconnect()
     }
   }
 
   public async isAuthorized(): Promise<boolean> {
-    if (!window.clover) {
+    if (!window.isCoin98) {
       return false;
     }
 
     try {
-      return await (window.clover.send as Send)("eth_accounts").then(
+      return await (window.ethereum.send as Send)("eth_accounts").then(
         (sendReturn) => {
           if (parseSendReturn(sendReturn).length > 0) {
             return true;
