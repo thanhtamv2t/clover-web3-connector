@@ -71,15 +71,15 @@ export class Coin98Connector extends AbstractConnector {
       throw new NoCoin98ProviderError();
     }
 
-    if (window?.ethereum?.on) {
+    if (window.ethereum.on) {
       window.ethereum.on("chainChanged", this.handleChainChanged);
       window.ethereum.on("accountsChanged", this.handleAccountsChanged);
       window.ethereum.on("close", this.handleClose);
       window.ethereum.on("networkChanged", this.handleNetworkChanged);
     }
 
-    if ((window?.ethereum as any).isMetaMask) {
-      (window?.ethereum as any).autoRefreshOnNetworkChange = false;
+    if ((window.ethereum as any).isMetaMask) {
+      (window.ethereum as any).autoRefreshOnNetworkChange = false;
     }
 
     // try to activate + get account via eth_requestAccounts

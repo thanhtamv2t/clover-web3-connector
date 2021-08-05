@@ -7,7 +7,7 @@ interface Coin98{
 }
 
 declare interface Window {
-  ethereum?: Coin98,
+  ethereum: Coin98,
   isCoin98?: boolean
 }
 
